@@ -1,0 +1,33 @@
+[
+  {
+    "id": 1,
+    "name": "Redline",
+    "weapon": "AK-47",
+    "price": 2350.0,
+    "wear": 0.25,
+    "condition": "После полевых испытаний",
+    "rarity": "Засекреченное",
+    "is_available": true
+  },
+  {
+    "id": 2,
+    "name": "Printstream",
+    "weapon": "M4A1-S",
+    "price": 18400.0,
+    "wear": 0.12,
+    "condition": "Немного поношенное",
+    "rarity": "Тайное",
+    "is_available": true
+  },
+  {
+    "id": 3,
+    "name": "Asiimov",
+    "weapon": "AWP",
+    "price": 9200.0,
+    "wear": 0.41,
+    "condition": "Поношенное",
+    "rarity": "Тайное",
+    "is_available": true
+  }
+]
+
