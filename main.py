@@ -1,55 +1,83 @@
-"""Начальный сценарий проекта «Система бронирования помещений»."""
+"""Начальный сценарий проекта «Коллекция скинов Counter-Strike»."""
 
-from datetime import date
+from decimal import Decimal
 
 
-ROOM_NAME = "Аудитория 301"
-ROOM_CAPACITY = 30
-HOURLY_RATE = 1500.0
-BOOKING_DATE = date(2026, 10, 10)
+SKIN_NAME = "AK-47 | Redline"
+SKIN_PRICE = Decimal("2350.00")
+USER_BALANCE = Decimal("5000.00")
+MIN_WEAR = 0.10
+MAX_WEAR = 0.70
 IS_AVAILABLE = True
 
 
-def has_enough_capacity(capacity: int, participants: int) -> bool:
-    """Проверить, помещаются ли все участники в выбранном помещении."""
-    return participants > 0 and participants <= capacity
+def get_skin_condition(wear: float) -> str:
+    """Определить состояние скина по значению износа."""
+    if wear < 0 or wear > 1:
+        return "Некорректное значение износа"
+    if wear < 0.07:
+        return "Прямо с завода"
+    if wear < 0.15:
+        return "Немного поношенное"
+    if wear < 0.38:
+        return "После полевых испытаний"
+    if wear < 0.45:
+        return "Поношенное"
+    return "Закалённое в боях"
 
 
-def get_booking_status(is_available: bool, capacity_ok: bool) -> str:
-    """Вернуть пояснение о возможности забронировать помещение."""
+def is_wear_allowed(wear: float, min_wear: float, max_wear: float) -> bool:
+    """Проверить, входит ли износ экземпляра в диапазон выбранного скина."""
+    return min_wear <= wear <= max_wear
+
+
+def calculate_balance_after_purchase(
+    balance: Decimal,
+    price: Decimal,
+) -> Decimal:
+    """Рассчитать остаток средств после покупки скина."""
+    return balance - price
+
+
+def get_purchase_status(
+    is_available: bool,
+    wear_allowed: bool,
+    balance_after_purchase: Decimal,
+) -> str:
+    """Вернуть результат проверки возможности покупки."""
     if not is_available:
-        return "Помещение уже занято на выбранную дату"
-    if not capacity_ok:
-        return "Помещение не подходит по вместимости"
-    return "Помещение можно забронировать"
-
-
-def calculate_booking_cost(hourly_rate: float, duration_hours: float) -> float:
-    """Рассчитать стоимость аренды с учётом продолжительности мероприятия."""
-    if duration_hours <= 0:
-        return 0.0
-    return hourly_rate * duration_hours
+        return "Скин сейчас недоступен"
+    if not wear_allowed:
+        return "Износ не соответствует диапазону выбранного скина"
+    if balance_after_purchase < 0:
+        return "Недостаточно средств для покупки"
+    return "Скин можно добавить в коллекцию"
 
 
 def main() -> None:
-    """Запустить демонстрационный сценарий бронирования."""
-    print("Система бронирования помещений")
-    print(f"Помещение: {ROOM_NAME}")
-    print(f"Вместимость: {ROOM_CAPACITY} человек")
-    print(f"Дата: {BOOKING_DATE.strftime('%d.%m.%Y')}")
+    """Запустить проверку покупки одного экземпляра скина."""
+    print("Система учёта коллекции скинов Counter-Strike")
+    print(f"Скин: {SKIN_NAME}")
+    print(f"Цена: {SKIN_PRICE:.2f} руб.")
+    print(f"Баланс: {USER_BALANCE:.2f} руб.")
 
-    participants = int(input("Количество участников: "))
-    duration_hours = float(input("Продолжительность мероприятия в часах: "))
+    wear = float(input("Введите износ экземпляра от 0 до 1: "))
+    condition = get_skin_condition(wear)
+    wear_allowed = is_wear_allowed(wear, MIN_WEAR, MAX_WEAR)
+    balance_after_purchase = calculate_balance_after_purchase(
+        USER_BALANCE,
+        SKIN_PRICE,
+    )
+    status = get_purchase_status(
+        IS_AVAILABLE,
+        wear_allowed,
+        balance_after_purchase,
+    )
 
-    capacity_ok = has_enough_capacity(ROOM_CAPACITY, participants)
-    status = get_booking_status(IS_AVAILABLE, capacity_ok)
-    cost = calculate_booking_cost(HOURLY_RATE, duration_hours)
-
-    print(f"Статус: {status}")
-    if IS_AVAILABLE and capacity_ok and cost > 0:
-        print(f"Предварительная стоимость: {cost:.2f} руб.")
-    else:
-        print("Стоимость не рассчитывается, пока бронирование невозможно")
+    print(f"Состояние: {condition}")
+    print(f"Результат: {status}")
+    if status == "Скин можно добавить в коллекцию":
+        print(f"Остаток после покупки: {balance_after_purchase:.2f} руб.")
 
 
 if __name__ == "__main__":
