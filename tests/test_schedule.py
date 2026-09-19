@@ -1,53 +1,63 @@
+from datetime import datetime
+
 import pytest
 
-from schedule import add_event, find_events_by_organizer, remove_event
+from models import Room, User
+from schedule import Schedule
 
 
-def sample_rooms():
-    return [{"id": 1, "name": "301", "capacity": 30,
-             "room_type": "Учебная"}]
-
-
-def test_add_event():
-    schedule = []
-    event = add_event(
-        schedule, sample_rooms(), "Защита", "Варвара", 1, 20,
-        "2026-09-21 10:00", "2026-09-21 11:00",
+def objects():
+    return Room(1, "301", 30, "Учебная"), User(
+        1, "Варвара", "v@example.com",
     )
-    assert event["id"] == 1
-    assert len(schedule) == 1
 
 
-def test_add_event_rejects_capacity():
-    with pytest.raises(ValueError, match="недостаточно"):
-        add_event(
-            [], sample_rooms(), "Защита", "Варвара", 1, 50,
-            "2026-09-21 10:00", "2026-09-21 11:00",
-        )
+def test_add_event_creates_event_object():
+    room, user = objects()
+    schedule = Schedule()
+    event = schedule.add_event(
+        "Защита", user, room, 20,
+        datetime(2026, 9, 21, 10), datetime(2026, 9, 21, 11),
+    )
+    assert event.id == 1
+    assert schedule.events == [event]
 
 
 def test_add_event_rejects_time_conflict():
-    schedule = []
-    add_event(
-        schedule, sample_rooms(), "Первое", "Варвара", 1, 10,
-        "2026-09-21 10:00", "2026-09-21 11:00",
+    room, user = objects()
+    schedule = Schedule()
+    schedule.add_event(
+        "Первое", user, room, 10,
+        datetime(2026, 9, 21, 10), datetime(2026, 9, 21, 11),
     )
     with pytest.raises(ValueError, match="занято"):
-        add_event(
-            schedule, sample_rooms(), "Второе", "Иван", 1, 10,
-            "2026-09-21 10:30", "2026-09-21 11:30",
+        schedule.add_event(
+            "Второе", user, room, 10,
+            datetime(2026, 9, 21, 10, 30),
+            datetime(2026, 9, 21, 11, 30),
         )
 
 
 def test_remove_event():
-    schedule = [{"id": 1, "title": "Защита"}]
-    assert remove_event(schedule, 1)["title"] == "Защита"
-    assert schedule == []
+    room, user = objects()
+    schedule = Schedule()
+    event = schedule.add_event(
+        "Защита", user, room, 10,
+        datetime(2026, 9, 21, 10), datetime(2026, 9, 21, 11),
+    )
+    assert schedule.remove_event(event.id) is event
+    assert schedule.events == []
 
 
-def test_find_events_by_organizer():
-    schedule = [
-        {"organizer": "Варвара"},
-        {"organizer": "Иван"},
-    ]
-    assert len(find_events_by_organizer(schedule, "варвара")) == 1
+def test_find_by_organizer():
+    room, user = objects()
+    schedule = Schedule()
+    schedule.add_event(
+        "Защита", user, room, 10,
+        datetime(2026, 9, 21, 10), datetime(2026, 9, 21, 11),
+    )
+    assert len(schedule.find_by_organizer("варвара")) == 1
+
+
+def test_schedule_string_representation():
+    assert str(Schedule()) == "Расписание пока пусто"

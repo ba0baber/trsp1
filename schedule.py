@@ -1,83 +1,46 @@
-"""Функции для управления расписанием мероприятий."""
+"""Класс расписания и взаимодействие объектов предметной области."""
 
 from datetime import datetime
 
-from rooms import Room, find_room_by_id
+from models import Event, Room, User
 
 
-ScheduleItem = dict[str, object]
-DATE_FORMAT = "%Y-%m-%d %H:%M"
+class Schedule:
+    """Расписание, содержащее объекты Event."""
 
+    def __init__(self, events: list[Event] | None = None) -> None:
+        self.events = events if events is not None else []
 
-def parse_datetime(value: str) -> datetime:
-    """Преобразовать строку в дату и время."""
-    try:
-        return datetime.strptime(value.strip(), DATE_FORMAT)
-    except ValueError as error:
-        raise ValueError("Используйте формат ГГГГ-ММ-ДД ЧЧ:ММ") from error
-
-
-def intervals_overlap(
-    start_a: datetime, end_a: datetime,
-    start_b: datetime, end_b: datetime,
-) -> bool:
-    """Проверить пересечение двух временных интервалов."""
-    return start_a < end_b and start_b < end_a
-
-
-def add_event(
-    schedule: list[ScheduleItem], rooms: list[Room], title: str,
-    organizer: str, room_id: int, participants: int,
-    start_text: str, end_text: str,
-) -> ScheduleItem:
-    """Добавить мероприятие после проверки помещения и времени."""
-    room = find_room_by_id(rooms, room_id)
-    if room is None:
-        raise LookupError("Помещение не найдено")
-    if not title.strip() or not organizer.strip():
-        raise ValueError("Название и организатор не могут быть пустыми")
-    if participants <= 0:
-        raise ValueError("Количество участников должно быть положительным")
-    if participants > int(room["capacity"]):
-        raise ValueError("В помещении недостаточно мест")
-    start = parse_datetime(start_text)
-    end = parse_datetime(end_text)
-    if end <= start:
-        raise ValueError("Окончание должно быть позже начала")
-    for item in schedule:
-        if item["room_id"] == room_id and intervals_overlap(
-            start, end,
-            parse_datetime(str(item["start"])),
-            parse_datetime(str(item["end"])),
-        ):
+    def add_event(
+        self, title: str, organizer: User, room: Room,
+        participants: int, start: datetime, end: datetime,
+    ) -> Event:
+        """Создать мероприятие при отсутствии временного конфликта."""
+        event = Event(
+            max((item.id for item in self.events), default=0) + 1,
+            title, organizer, room, participants, start, end,
+        )
+        if any(event.overlaps(item) for item in self.events):
             raise ValueError("Помещение занято в указанное время")
-    event: ScheduleItem = {
-        "id": max((int(item["id"]) for item in schedule), default=0) + 1,
-        "title": title.strip(),
-        "organizer": organizer.strip(),
-        "room_id": room_id,
-        "participants": participants,
-        "start": start.strftime(DATE_FORMAT),
-        "end": end.strftime(DATE_FORMAT),
-    }
-    schedule.append(event)
-    return event
+        self.events.append(event)
+        return event
 
+    def remove_event(self, event_id: int) -> Event:
+        """Удалить мероприятие из расписания."""
+        for index, event in enumerate(self.events):
+            if event.id == event_id:
+                return self.events.pop(index)
+        raise LookupError("Мероприятие не найдено")
 
-def remove_event(schedule: list[ScheduleItem], event_id: int) -> ScheduleItem:
-    """Удалить мероприятие из расписания."""
-    for index, item in enumerate(schedule):
-        if item["id"] == event_id:
-            return schedule.pop(index)
-    raise LookupError("Мероприятие не найдено")
+    def find_by_organizer(self, organizer: str) -> list[Event]:
+        """Вернуть мероприятия указанного организатора."""
+        normalized = organizer.strip().lower()
+        return [
+            event for event in self.events
+            if event.organizer.name.lower() == normalized
+        ]
 
-
-def find_events_by_organizer(
-    schedule: list[ScheduleItem], organizer: str,
-) -> list[ScheduleItem]:
-    """Вернуть мероприятия указанного пользователя."""
-    normalized = organizer.strip().lower()
-    return [
-        item for item in schedule
-        if str(item["organizer"]).lower() == normalized
-    ]
+    def __str__(self) -> str:
+        return "\n".join(str(event) for event in self.events) or (
+            "Расписание пока пусто"
+        )
