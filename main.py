@@ -1,66 +1,93 @@
-"""Практическая работа 1: проверка возможности запланировать мероприятие."""
+"""Консольный интерфейс сервиса планирования помещений."""
 
-from datetime import datetime
+from pathlib import Path
 
-
-ROOM_NAME = "Аудитория 301"
-ROOM_CAPACITY = 30
-EVENT_NAME = "Защита практической работы"
-EVENT_PARTICIPANTS = 25
-START_TIME = "2026-09-21 10:00"
-END_TIME = "2026-09-21 11:30"
-ROOM_IS_AVAILABLE = True
+from rooms import filter_rooms_by_capacity, find_rooms, sort_rooms_by_capacity
+from schedule import add_event, remove_event
+from storage import StorageError, load_json, save_json
+from utils import input_int
 
 
-def parse_datetime(value: str) -> datetime:
-    """Преобразовать строку формата ГГГГ-ММ-ДД ЧЧ:ММ в дату и время."""
-    return datetime.strptime(value, "%Y-%m-%d %H:%M")
+DATA_DIR = Path(__file__).parent / "data"
+ROOMS_FILE = DATA_DIR / "rooms.json"
+SCHEDULE_FILE = DATA_DIR / "schedule.json"
 
 
-def has_enough_capacity(capacity: int, participants: int) -> bool:
-    """Проверить, достаточно ли мест в помещении."""
-    return capacity >= participants
+def show_rooms(rooms: list[dict[str, object]]) -> None:
+    """Вывести список помещений."""
+    if not rooms:
+        print("Помещения не найдены")
+    for room in rooms:
+        print(
+            f'{room["id"]}. {room["name"]}; {room["room_type"]}; '
+            f'{room["capacity"]} мест'
+        )
 
 
-def calculate_duration_minutes(start: datetime, end: datetime) -> int:
-    """Вычислить продолжительность мероприятия в минутах."""
-    if end <= start:
-        raise ValueError("Время окончания должно быть позже времени начала")
-    return int((end - start).total_seconds() // 60)
+def show_schedule(schedule: list[dict[str, object]]) -> None:
+    """Вывести расписание мероприятий."""
+    if not schedule:
+        print("Расписание пока пусто")
+    for event in schedule:
+        print(
+            f'{event["id"]}. {event["title"]}; помещение {event["room_id"]}; '
+            f'{event["start"]} — {event["end"]}; '
+            f'организатор: {event["organizer"]}'
+        )
 
 
-def get_planning_status(
-    is_available: bool,
-    capacity_is_enough: bool,
-) -> str:
-    """Вернуть результат проверки возможности планирования."""
-    if not is_available:
-        return "Помещение занято"
-    if not capacity_is_enough:
-        return "В помещении недостаточно мест"
-    return "Мероприятие можно добавить в расписание"
+def run_menu(
+    rooms: list[dict[str, object]],
+    schedule: list[dict[str, object]],
+) -> None:
+    """Обрабатывать пункты меню до команды выхода."""
+    while True:
+        print("\n=== Планирование помещений ===")
+        print("1. Показать помещения")
+        print("2. Найти помещение")
+        print("3. Подобрать помещение по вместимости")
+        print("4. Добавить мероприятие")
+        print("5. Удалить мероприятие")
+        print("6. Показать расписание")
+        print("0. Выход")
+        choice = input("Выберите действие: ").strip()
+        try:
+            if choice == "1":
+                show_rooms(sort_rooms_by_capacity(rooms))
+            elif choice == "2":
+                show_rooms(find_rooms(rooms, input("Название или тип: ")))
+            elif choice == "3":
+                count = input_int("Количество участников: ", 1)
+                show_rooms(filter_rooms_by_capacity(rooms, count))
+            elif choice == "4":
+                event = add_event(
+                    schedule, rooms, input("Название: "),
+                    input("Организатор: "), input_int("ID помещения: ", 1),
+                    input_int("Участников: ", 1), input("Начало: "),
+                    input("Окончание: "),
+                )
+                save_json(SCHEDULE_FILE, schedule)
+                print(f'Мероприятие добавлено. ID: {event["id"]}')
+            elif choice == "5":
+                remove_event(schedule, input_int("ID мероприятия: ", 1))
+                save_json(SCHEDULE_FILE, schedule)
+                print("Мероприятие удалено")
+            elif choice == "6":
+                show_schedule(schedule)
+            elif choice == "0":
+                break
+            else:
+                print("Неизвестная команда")
+        except (LookupError, ValueError, StorageError) as error:
+            print(f"Ошибка: {error}")
 
 
 def main() -> None:
-    """Запустить демонстрационный сценарий практической работы 1."""
-    print("Сервис планирования использования помещений")
-    print(f"Помещение: {ROOM_NAME}, вместимость: {ROOM_CAPACITY}")
-    print(f"Мероприятие: {EVENT_NAME}")
-    print(f"Количество участников: {EVENT_PARTICIPANTS}")
-
-    start = parse_datetime(START_TIME)
-    end = parse_datetime(END_TIME)
-    duration = calculate_duration_minutes(start, end)
-    capacity_is_enough = has_enough_capacity(
-        ROOM_CAPACITY,
-        EVENT_PARTICIPANTS,
-    )
-    status = get_planning_status(ROOM_IS_AVAILABLE, capacity_is_enough)
-
-    print(f"Начало: {start:%d.%m.%Y %H:%M}")
-    print(f"Окончание: {end:%d.%m.%Y %H:%M}")
-    print(f"Продолжительность: {duration} мин.")
-    print(f"Результат: {status}")
+    """Загрузить данные и запустить меню."""
+    try:
+        run_menu(load_json(ROOMS_FILE), load_json(SCHEDULE_FILE))
+    except StorageError as error:
+        print(f"Ошибка хранения данных: {error}")
 
 
 if __name__ == "__main__":
