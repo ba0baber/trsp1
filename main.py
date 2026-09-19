@@ -1,14 +1,13 @@
-"""Консольный интерфейс системы учёта коллекции скинов."""
+"""Консольный интерфейс объектной системы учёта коллекции скинов."""
 
 from pathlib import Path
 
-from collection import (
-    add_to_collection,
-    calculate_collection_value,
-    remove_from_collection,
-)
+from collection import Collection
+from models import Skin, User
 from skins import filter_skins_by_price, find_skins, sort_skins_by_price
-from storage import StorageError, load_json, save_json
+from storage import (
+    StorageError, load_collection, load_skins, save_collection, save_skins,
+)
 from utils import input_float, input_int
 
 
@@ -17,51 +16,21 @@ SKINS_FILE = DATA_DIR / "skins.json"
 COLLECTION_FILE = DATA_DIR / "collection.json"
 
 
-def show_skins(skins: list[dict[str, object]]) -> None:
-    """Вывести каталог скинов в компактном виде."""
-    if not skins:
-        print("Скины не найдены")
-        return
-    for skin in skins:
-        availability = "доступен" if skin["is_available"] else "в коллекции"
-        print(
-            f'{skin["id"]}. {skin["weapon"]} | {skin["name"]}; '
-            f'{skin["condition"]}; {float(skin["price"]):.2f} руб.; '
-            f"{availability}"
-        )
+def show_skins(skins: list[Skin]) -> None:
+    """Вывести каталог скинов."""
+    print("\n".join(str(skin) for skin in skins) or "Скины не найдены")
 
 
-def show_collection(collection: list[dict[str, object]]) -> None:
-    """Вывести коллекцию и её общую стоимость."""
-    if not collection:
-        print("Коллекция пока пуста")
-        return
-    for item in collection:
-        print(
-            f'Запись {item["id"]}: владелец {item["owner"]}, '
-            f'скин {item["skin_id"]}, цена покупки '
-            f'{float(item["purchase_price"]):.2f} руб.'
-        )
-    value = calculate_collection_value(collection)
-    print(f"Стоимость коллекции: {value:.2f} руб.")
+def save_project_data(skins: list[Skin], collection: Collection) -> None:
+    """Сохранить объектную модель в JSON-файлы."""
+    save_skins(SKINS_FILE, skins)
+    save_collection(COLLECTION_FILE, collection)
 
 
-def save_project_data(
-    skins: list[dict[str, object]],
-    collection: list[dict[str, object]],
-) -> None:
-    """Сохранить каталог и коллекцию в JSON-файлы."""
-    save_json(SKINS_FILE, skins)
-    save_json(COLLECTION_FILE, collection)
-
-
-def run_menu(
-    skins: list[dict[str, object]],
-    collection: list[dict[str, object]],
-) -> None:
+def run_menu(skins: list[Skin], collection: Collection) -> None:
     """Обрабатывать пункты пользовательского меню до команды выхода."""
     while True:
-        print("\n=== Коллекция скинов Counter-Strike ===")
+        print("\n=== Коллекция скинов Counter-Strike (ООП) ===")
         print("1. Показать каталог")
         print("2. Найти скин")
         print("3. Отобрать скины по цене")
@@ -70,7 +39,6 @@ def run_menu(
         print("6. Показать коллекцию")
         print("0. Выход")
         choice = input("Выберите действие: ").strip()
-
         try:
             if choice == "1":
                 show_skins(sort_skins_by_price(skins))
@@ -80,25 +48,21 @@ def run_menu(
                 limit = input_float("Максимальная цена: ", minimum=0)
                 show_skins(filter_skins_by_price(skins, limit))
             elif choice == "4":
-                owner = input("Имя владельца: ")
-                skin_id = input_int("ID скина: ", minimum=1)
-                balance = input_float("Баланс: ", minimum=0)
-                item = add_to_collection(
-                    collection,
-                    skins,
-                    owner,
-                    skin_id,
-                    balance,
+                user = User(
+                    input("Имя владельца: "),
+                    input_float("Баланс: ", minimum=0),
                 )
+                skin_id = input_int("ID скина: ", minimum=1)
+                item = collection.purchase(skins, user, skin_id)
                 save_project_data(skins, collection)
-                print(f'Скин добавлен в коллекцию. ID записи: {item["id"]}')
+                print(f"Скин добавлен. {user}. ID записи: {item.id}")
             elif choice == "5":
                 item_id = input_int("ID записи коллекции: ", minimum=1)
-                remove_from_collection(collection, skins, item_id)
+                collection.remove(skins, item_id)
                 save_project_data(skins, collection)
                 print("Предмет удалён из коллекции")
             elif choice == "6":
-                show_collection(collection)
+                print(collection)
             elif choice == "0":
                 break
             else:
@@ -108,11 +72,9 @@ def run_menu(
 
 
 def main() -> None:
-    """Загрузить данные и запустить консольное меню."""
+    """Загрузить объекты и запустить консольное меню."""
     try:
-        skins = load_json(SKINS_FILE)
-        collection = load_json(COLLECTION_FILE)
-        run_menu(skins, collection)
+        run_menu(load_skins(SKINS_FILE), load_collection(COLLECTION_FILE))
     except StorageError as error:
         print(f"Ошибка хранения данных: {error}")
 

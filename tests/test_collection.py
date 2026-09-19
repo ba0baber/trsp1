@@ -1,69 +1,64 @@
 import pytest
 
-from collection import (
-    add_to_collection,
-    calculate_collection_value,
-    find_owner_items,
-    remove_from_collection,
-)
+from collection import Collection
+from models import CollectionItem, Skin, User
 
 
 def sample_skins():
-    return [
-        {
-            "id": 1,
-            "name": "Redline",
-            "weapon": "AK-47",
-            "price": 2350.0,
-            "wear": 0.25,
-            "condition": "После полевых испытаний",
-            "rarity": "Засекреченное",
-            "is_available": True,
-        }
-    ]
+    return [Skin(1, "Redline", "AK-47", 2350, 0.25, "Засекреченное")]
 
 
-def test_add_to_collection_marks_skin_unavailable():
+def test_purchase_connects_user_skin_and_collection():
     skins = sample_skins()
-    collection = []
-    item = add_to_collection(collection, skins, "Варвара", 1, 5000)
-    assert item["skin_id"] == 1
-    assert skins[0]["is_available"] is False
+    user = User("Варвара", 5000)
+    collection = Collection()
+    item = collection.purchase(skins, user, 1)
+    assert item.skin_id == skins[0].id
+    assert item.owner == user.name
+    assert user.balance == 2650
+    assert skins[0].is_available is False
 
 
-def test_add_to_collection_rejects_insufficient_balance():
+def test_purchase_rejects_insufficient_balance():
     with pytest.raises(ValueError, match="Недостаточно"):
-        add_to_collection([], sample_skins(), "Варвара", 1, 100)
+        Collection().purchase(sample_skins(), User("Варвара", 100), 1)
 
 
 def test_duplicate_purchase_is_forbidden():
     skins = sample_skins()
-    collection = []
-    add_to_collection(collection, skins, "Варвара", 1, 5000)
+    collection = Collection()
+    collection.purchase(skins, User("Варвара", 5000), 1)
     with pytest.raises(ValueError, match="недоступен"):
-        add_to_collection(collection, skins, "Варвара", 1, 5000)
+        collection.purchase(skins, User("Варвара", 5000), 1)
 
 
-def test_remove_from_collection_restores_availability():
+def test_remove_restores_availability():
     skins = sample_skins()
-    collection = []
-    item = add_to_collection(collection, skins, "Варвара", 1, 5000)
-    remove_from_collection(collection, skins, int(item["id"]))
-    assert collection == []
-    assert skins[0]["is_available"] is True
+    collection = Collection()
+    item = collection.purchase(skins, User("Варвара", 5000), 1)
+    collection.remove(skins, item.id)
+    assert collection.items == []
+    assert skins[0].is_available is True
 
 
-def test_calculate_collection_value():
-    collection = [
-        {"id": 1, "owner": "Варвара", "skin_id": 1, "purchase_price": 100},
-        {"id": 2, "owner": "Варвара", "skin_id": 2, "purchase_price": 250},
-    ]
-    assert calculate_collection_value(collection) == 350
+def test_total_value_and_string_representation():
+    collection = Collection([
+        CollectionItem(1, "Варвара", 1, 100),
+        CollectionItem(2, "Варвара", 2, 250),
+    ])
+    assert collection.total_value() == 350
+    assert "Стоимость коллекции: 350.00" in str(collection)
 
 
-def test_find_owner_items_is_case_insensitive():
-    collection = [
-        {"id": 1, "owner": "Варвара", "skin_id": 1, "purchase_price": 100},
-        {"id": 2, "owner": "Иван", "skin_id": 2, "purchase_price": 250},
-    ]
-    assert len(find_owner_items(collection, "варвара")) == 1
+def test_find_by_owner_is_case_insensitive():
+    collection = Collection([
+        CollectionItem(1, "Варвара", 1, 100),
+        CollectionItem(2, "Иван", 2, 250),
+    ])
+    assert len(collection.find_by_owner("варвара")) == 1
+
+
+def test_user_validates_name_and_protects_balance():
+    with pytest.raises(ValueError, match="Имя"):
+        User(" ", 100)
+    assert User("Варвара", 100).balance == 100

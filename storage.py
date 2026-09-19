@@ -4,6 +4,9 @@ import json
 from pathlib import Path
 from typing import Any
 
+from collection import Collection
+from models import CollectionItem, Skin
+
 
 class StorageError(Exception):
     """Ошибка чтения или записи данных проекта."""
@@ -31,3 +34,30 @@ def save_json(path: Path, data: list[dict[str, Any]]) -> None:
             json.dump(data, file, ensure_ascii=False, indent=2)
     except OSError as error:
         raise StorageError(f"Не удалось сохранить данные в {path}") from error
+
+
+def load_skins(path: Path) -> list[Skin]:
+    """Загрузить каталог JSON и создать объекты Skin."""
+    try:
+        return [Skin.from_dict(item) for item in load_json(path)]
+    except ValueError as error:
+        raise StorageError(f"Некорректный каталог в {path}") from error
+
+
+def save_skins(path: Path, skins: list[Skin]) -> None:
+    """Сохранить объекты Skin в JSON."""
+    save_json(path, [skin.to_dict() for skin in skins])
+
+
+def load_collection(path: Path) -> Collection:
+    """Загрузить JSON и создать объект Collection."""
+    try:
+        items = [CollectionItem.from_dict(item) for item in load_json(path)]
+    except ValueError as error:
+        raise StorageError(f"Некорректная коллекция в {path}") from error
+    return Collection(items)
+
+
+def save_collection(path: Path, collection: Collection) -> None:
+    """Сохранить объект Collection в JSON."""
+    save_json(path, [item.to_dict() for item in collection.items])
