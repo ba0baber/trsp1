@@ -2,8 +2,9 @@ from datetime import datetime
 
 import pytest
 
-from models import Room, User
+from room import Room
 from schedule import Schedule
+from user import User
 
 
 def objects():

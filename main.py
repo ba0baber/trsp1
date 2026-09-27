@@ -2,14 +2,15 @@
 
 from pathlib import Path
 
-from models import Room, User, parse_datetime
-from rooms import filter_rooms_by_capacity, find_room_by_id, find_rooms
-from rooms import sort_rooms_by_capacity
+from room import Room
+from room_service import filter_rooms_by_capacity, find_room_by_id, find_rooms
+from room_service import sort_rooms_by_capacity
 from schedule import Schedule
 from storage import (
     StorageError, load_rooms, load_schedule, load_users, save_schedule,
 )
-from utils import input_int
+from user import User
+from utils import input_int, parse_datetime
 
 
 DATA_DIR = Path(__file__).parent / "data"

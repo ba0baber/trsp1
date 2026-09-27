@@ -1,8 +1,8 @@
-"""Операции с коллекцией объектов Room."""
+"""Операции с каталогом объектов Room."""
 
 from collections.abc import Iterator
 
-from models import Room
+from room import Room
 
 
 def add_room(
@@ -11,7 +11,9 @@ def add_room(
     """Создать объект Room и добавить его в список."""
     room = Room(
         max((item.id for item in rooms), default=0) + 1,
-        name, capacity, room_type,
+        name,
+        capacity,
+        room_type,
     )
     rooms.append(room)
     return room

@@ -1,5 +1,5 @@
-from models import Room
-from rooms import (
+from room import Room
+from room_service import (
     add_room, filter_rooms_by_capacity, find_rooms,
     iter_rooms_by_type, sort_rooms_by_capacity,
 )

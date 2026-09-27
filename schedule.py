@@ -2,7 +2,9 @@
 
 from datetime import datetime
 
-from models import Event, Room, User
+from event import Event
+from room import Room
+from user import User
 
 
 class Schedule:

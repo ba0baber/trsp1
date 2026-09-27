@@ -2,12 +2,13 @@ import json
 
 import pytest
 
-from models import Room, User
+from room import Room
 from schedule import Schedule
 from storage import (
     StorageError, load_json, load_rooms, load_schedule, load_users,
     save_rooms, save_schedule, save_users,
 )
+from user import User
 
 
 def test_load_invalid_json_raises_storage_error(tmp_path):

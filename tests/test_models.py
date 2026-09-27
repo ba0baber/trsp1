@@ -2,7 +2,9 @@ from datetime import datetime
 
 import pytest
 
-from models import Event, Room, User
+from event import Event
+from room import Room
+from user import User
 
 
 def test_room_validates_capacity_and_can_host():

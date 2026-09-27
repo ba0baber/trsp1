@@ -4,8 +4,11 @@ import json
 from pathlib import Path
 from typing import Any
 
-from models import Event, Room, User, parse_datetime
+from event import Event
+from room import Room
 from schedule import Schedule
+from user import User
+from utils import parse_datetime
 
 
 class StorageError(Exception):
